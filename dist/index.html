@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Parcel Sandbox</title>
+    <meta charset="UTF-8">
+    <style>#calendar-container {
+        position: relative;
+      }
+      .calendar-event {
+        position: absolute;
+        border: 1px solid #000;
+      }</style>
+  </head>
+
+  <body>
+    <div id="calendar-container"></div>
+    <script>// the array of events to render on the calendar
+var events = [{
+  id: 1,
+  start: "09:00",
+  duration: 60
+}, {
+  id: 2,
+  start: "11:00",
+  duration: 120
+}, {
+  id: 3,
+  start: "11:00",
+  duration: 60
+}, {
+  id: 4,
+  start: "14:00",
+  duration: 60
+}, {
+  id: 5,
+  start: "14:30",
+  duration: 120
+}, {
+  id: 6,
+  start: "16:00",
+  duration: 60
+}];
+function renderCalendar(events) {
+  var containerHeight = window.screen.height; // the height of the container in pixels
+  var startTime = 9 * 60; // the start time of the calendar in minutes (9:00 am)
+  var endTime = 21 * 60; // the end time of the calendar in minutes (9:00 pm)
+
+  // convert the events to an array of objects with start and end times in pixels
+  var eventElements = events.map(function (event) {
+    var start = (event.start.split(":")[0] * 60 + parseInt(event.start.split(":")[1]) - startTime) / (endTime - startTime) * containerHeight;
+    var end = start + event.duration / (endTime - startTime) * containerHeight;
+    return {
+      start: start,
+      end: end,
+      event: event
+    };
+  });
+
+  // sort the events by start time
+  eventElements.sort(function (a, b) {
+    return a.start - b.start;
+  });
+  var eventCalculated = {};
+
+  // calculate the overlapping events
+  eventElements.forEach(function (event, index) {
+    var overlaps = [];
+    for (var i = 0; i < eventElements.length; i++) {
+      // event.end < eventElements[i].start
+      if (event.event.id != eventElements[i].event.id && event.end > eventElements[i].start && event.start < eventElements[i].end) {
+        overlaps.push(eventElements[i]);
+        eventCalculated[eventElements[i].event.id] = true;
+      }
+    }
+    event.overlaps = overlaps;
+  });
+  return eventElements;
+}
+function removeAllChildNodes(parent) {
+  while (parent.firstChild) {
+    parent.removeChild(parent.firstChild);
+  }
+}
+function renderEvents(eventElements) {
+  var container = document.getElementById("calendar-container");
+  container.style.height = window.screen.height;
+  var insertElement = {};
+  eventElements.forEach(function (event) {
+    var div = document.createElement("div");
+    if (!insertElement[event.event.id]) {
+      if (event.overlaps.length != 0) {
+        insertElement[event.event.id] = true;
+        div.style.whiteSpace = "nowrap";
+        div.style.position = "absolute";
+        div.style.width = "100%";
+        var divChild = document.createElement("div");
+        divChild.style.display = "inline-block";
+        divChild.style.marginTop = "".concat(event.start, "px");
+        divChild.style.height = "".concat(event.end - event.start, "px");
+        divChild.style.width = "".concat(100 / (event.overlaps.length + 1), "%");
+        divChild.style.backgroundColor = "#ccc";
+        divChild.style.border = "1px solid #000";
+        divChild.innerHTML = event.event.id;
+        div.appendChild(divChild);
+        event.overlaps.forEach(function (overlap) {
+          if (!insertElement[overlap.event.id]) {
+            insertElement[overlap.event.id] = true;
+            var _divChild = document.createElement("div");
+            _divChild.style.display = "inline-block";
+            _divChild.style.verticalAlign = "top";
+            _divChild.style.marginTop = "".concat(overlap.start, "px");
+            _divChild.style.height = "".concat(overlap.end - overlap.start, "px");
+            _divChild.style.width = "".concat(100 / (event.overlaps.length + 1), "%");
+            _divChild.style.backgroundColor = "#ccc";
+            _divChild.style.border = "1px solid #000";
+            _divChild.innerHTML = overlap.event.id;
+            div.appendChild(_divChild);
+          }
+        });
+      } else {
+        var test = eventElements.filter(function (e) {
+          return e.overlaps.length > 0;
+        });
+        div.style.position = "absolute";
+        div.style.marginTop = "".concat(event.start, "px");
+        div.style.height = "".concat(event.end - event.start, "px");
+        div.style.width = "".concat(100 / (event.overlaps.length + 1), "%");
+        div.style.backgroundColor = "#ccc";
+        div.style.border = "1px solid #000";
+        div.innerHTML = event.event.id;
+      }
+      container.appendChild(div);
+    }
+  });
+}
+window.addEventListener("resize", function () {
+  var container = document.querySelector("#calendar-container");
+  removeAllChildNodes(container);
+  var eventElements = renderCalendar(events);
+  renderEvents(eventElements);
+});
+
+// render the calendar initially
+var eventElements = renderCalendar(events);
+renderEvents(eventElements);</script>
+  </body>
+</html>
