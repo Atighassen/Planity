@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Parcel Sandbox</title>
+    <meta charset="UTF-8" />
+    <style>
+      #calendar-container {
+        position: relative;
+      }
+      .calendar-event {
+        position: absolute;
+        border: 1px solid #000;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="calendar-container"></div>
+    <script>
+      // the array of events to render on the calendar
+      const events = [
+        { id: 1, start: "09:00", duration: 60 },
+        { id: 2, start: "11:00", duration: 120 },
+        { id: 3, start: "11:00", duration: 60 },
+        { id: 4, start: "14:00", duration: 60 },
+        { id: 5, start: "14:30", duration: 120 },
+        { id: 6, start: "16:00", duration: 60 }
+      ];
+
+      function renderCalendar(events) {
+        const containerHeight = window.screen.height; // the height of the container in pixels
+        const startTime = 9 * 60; // the start time of the calendar in minutes (9:00 am)
+        const endTime = 21 * 60; // the end time of the calendar in minutes (9:00 pm)
+
+        // convert the events to an array of objects with start and end times in pixels
+        const eventElements = events.map((event) => {
+          const start =
+            ((event.start.split(":")[0] * 60 +
+              parseInt(event.start.split(":")[1]) -
+              startTime) /
+              (endTime - startTime)) *
+            containerHeight;
+          const end =
+            start + (event.duration / (endTime - startTime)) * containerHeight;
+          return {
+            start,
+            end,
+            event
+          };
+        });
+
+        // sort the events by start time
+        eventElements.sort((a, b) => a.start - b.start);
+        const eventCalculated = {};
+
+        // calculate the overlapping events
+        eventElements.forEach((event, index) => {
+          const overlaps = [];
+          for (let i = 0; i < eventElements.length; i++) {
+            // event.end < eventElements[i].start
+            if (
+              event.event.id != eventElements[i].event.id &&
+              event.end > eventElements[i].start &&
+              event.start < eventElements[i].end
+            ) {
+              overlaps.push(eventElements[i]);
+              eventCalculated[eventElements[i].event.id] = true;
+            }
+          }
+          event.overlaps = overlaps;
+        });
+        return eventElements;
+      }
+      function removeAllChildNodes(parent) {
+        while (parent.firstChild) {
+          parent.removeChild(parent.firstChild);
+        }
+      }
+
+      function renderEvents(eventElements) {
+        const container = document.getElementById("calendar-container");
+        container.style.height = window.screen.height;
+        let insertElement = {};
+        eventElements.forEach((event) => {
+          const div = document.createElement("div");
+          if (!insertElement[event.event.id]) {
+            if (event.overlaps.length != 0) {
+              insertElement[event.event.id] = true;
+              div.style.whiteSpace = "nowrap";
+              div.style.position = "absolute";
+              div.style.width = "100%";
+
+              const divChild = document.createElement("div");
+              divChild.style.display = "inline-block";
+              divChild.style.marginTop = `${event.start}px`;
+              divChild.style.height = `${event.end - event.start}px`;
+              divChild.style.width = `${100 / (event.overlaps.length + 1)}%`;
+              divChild.style.backgroundColor = "#ccc";
+              divChild.style.border = "1px solid #000";
+              divChild.innerHTML = event.event.id;
+              div.appendChild(divChild);
+
+              event.overlaps.forEach((overlap) => {
+                if (!insertElement[overlap.event.id]) {
+                  insertElement[overlap.event.id] = true;
+                  const divChild = document.createElement("div");
+                  divChild.style.display = "inline-block";
+                  divChild.style.verticalAlign = "top";
+                  divChild.style.marginTop = `${overlap.start}px`;
+                  divChild.style.height = `${overlap.end - overlap.start}px`;
+                  divChild.style.width = `${
+                    100 / (event.overlaps.length + 1)
+                  }%`;
+                  divChild.style.backgroundColor = "#ccc";
+                  divChild.style.border = "1px solid #000";
+                  divChild.innerHTML = overlap.event.id;
+                  div.appendChild(divChild);
+                }
+              });
+            } else {
+              const test = eventElements.filter((e) => e.overlaps.length > 0);
+              div.style.position = "absolute";
+              div.style.marginTop = `${event.start}px`;
+              div.style.height = `${event.end - event.start}px`;
+              div.style.width = `${100 / (event.overlaps.length + 1)}%`;
+              div.style.backgroundColor = "#ccc";
+              div.style.border = "1px solid #000";
+              div.innerHTML = event.event.id;
+            }
+
+            container.appendChild(div);
+          }
+        });
+      }
+
+      window.addEventListener("resize", () => {
+        const container = document.querySelector("#calendar-container");
+        removeAllChildNodes(container);
+        const eventElements = renderCalendar(events);
+        renderEvents(eventElements);
+      });
+
+      // render the calendar initially
+      const eventElements = renderCalendar(events);
+      renderEvents(eventElements);
+    </script>
+  </body>
+</html>
